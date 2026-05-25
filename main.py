@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from hashlib import sha1
 from json import loads, dumps, load
 from random import choice
