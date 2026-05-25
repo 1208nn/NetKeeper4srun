@@ -1,11 +1,9 @@
-from datetime import datetime
 from hashlib import sha1
 from json import loads, dumps, load
 from random import choice
 from sys import stdout
 from time import time, sleep
 
-from apscheduler.schedulers.blocking import BlockingScheduler
 from loguru import logger
 from requests import Session
 
@@ -248,11 +246,9 @@ def main():
     except Exception as e:
         logger.bind(module="srun_login").error(f"{e}, please check auth.json")
         exit(-1)
-    scheduler = BlockingScheduler()
-    scheduler.add_job(refresh, "interval", hours=6)
-    scheduler.add_job(check, "interval", minutes=2, next_run_time=datetime.now())
     logger.info("Process started")
-    scheduler.start()
+    refresh()
+    check()
 
 
 if __name__ == "__main__":

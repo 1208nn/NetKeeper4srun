@@ -5,7 +5,6 @@ description = "ZJUT"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "apscheduler==3.10.4",
     "loguru==0.7.2",
     "requests==2.32.3",
 ]
