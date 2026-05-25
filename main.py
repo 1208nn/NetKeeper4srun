@@ -234,7 +234,7 @@ def main():
     logger.remove()
     logger.add(
         "srun_login.log",
-        rotation="10 MB",
+        rotation="1 MB",
         level="DEBUG",
         format="<g>{time:MM-DD HH:mm:ss}</g> [<lvl>{level}</lvl>] <c><u>srun_login</u></c> | {message}",
     )
@@ -244,9 +244,9 @@ def main():
         format="<g>{time:MM-DD HH:mm:ss}</g> [<lvl>{level}</lvl>] <c><u>srun_login</u></c> | {message}",
     )
     try:
-        auths = load(open("auth.json", "r", encoding="utf-8"))
+        auths = load(open("srun_auth.json", "r", encoding="utf-8"))
     except Exception as e:
-        logger.bind(module="srun_login").error(f"{e}, please check auth.json")
+        logger.bind(module="srun_login").error(f"{e}, please check srun_auth.json")
         exit(-1)
     logger.info("Process started")
     refresh()
