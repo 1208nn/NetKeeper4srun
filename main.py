@@ -2,7 +2,6 @@ from datetime import datetime
 from hashlib import sha1
 from json import loads, dumps, load
 from random import choice
-from re import compile
 from sys import stdout
 from time import time, sleep
 
@@ -17,7 +16,7 @@ from utils.xencode import xencode
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 "
-                  " Safari/537.36 Edg/128.0.0.0"
+    " Safari/537.36 Edg/128.0.0.0"
 }
 auths = []
 
@@ -37,9 +36,7 @@ class Manager(Session):
         self.token, self.checksum, self.info = None, None, None
 
     def get_host(self):
-        hosts = [
-            "https://login.hdu.edu.cn", "https://portal.hdu.edu.cn", "http://192.168.112.30", "http://192.168.112.97"
-        ]
+        hosts = ["http://192.168.210.175"]
         for i in hosts:
             try:
                 self.get(i)
@@ -50,10 +47,15 @@ class Manager(Session):
         exit(-1)
 
     def get_ip(self) -> str:
-        resp = self.get(self.host + f"/srun_portal_pc", headers=headers).text
+        resp = self.get(self.host + "/srun_portal_pc", headers=headers).text
         try:
-            ip = compile(r'((1\d{2}|25[0-5]|2[0-4]\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)').search(
-                resp).group()
+            ip = (
+                compile(
+                    r"((1\d{2}|25[0-5]|2[0-4]\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)"
+                )
+                .search(resp)
+                .group()
+            )
         except AttributeError:
             self.logger.error("Failed to get IP")
             ip = self.get_ip()
@@ -65,23 +67,31 @@ class Manager(Session):
             "callback": callback,
             "username": self.username,
             "ip": self.get_ip(),
-            "_": round(time() * 1000)
+            "_": round(time() * 1000),
         }
-        resp = self.get(self.host + "/cgi-bin/get_challenge", headers=headers, params=params).text.strip(
-            callback + "()")
+        resp = self.get(
+            self.host + "/cgi-bin/get_challenge", headers=headers, params=params
+        ).text.strip(callback + "()")
         self.logger.debug(resp)
         token = loads(resp)["challenge"]
         self.logger.info(f"Token: {token}")
         return token
 
     def get_info(self) -> str:
-        return "{SRBX1}" + b64encode(xencode(dumps({
-            "username": self.username,
-            "password": self.password,
-            "ip": self.get_ip(),
-            "acid": str(self.acid),
-            "enc_ver": self.enc_ver,
-        }), self.token))
+        return "{SRBX1}" + b64encode(
+            xencode(
+                dumps(
+                    {
+                        "username": self.username,
+                        "password": self.password,
+                        "ip": self.get_ip(),
+                        "acid": str(self.acid),
+                        "enc_ver": self.enc_ver,
+                    }
+                ),
+                self.token,
+            )
+        )
 
     def get_checksum(self) -> str:
         checksum = self.token + self.username
@@ -104,8 +114,8 @@ class Manager(Session):
             "action": "login",
             "username": self.username,
             "password": "{MD5}" + md5(self.password, self.token),
-            'os': device[0],
-            'name': device[1],
+            "os": device[0],
+            "name": device[1],
             "double_stack": "0",
             "chksum": self.checksum,
             "info": self.info,
@@ -113,13 +123,17 @@ class Manager(Session):
             "ip": self.get_ip(),
             "n": self.n,
             "type": self.vtype,
-            "_": round(time() * 1000)
+            "_": round(time() * 1000),
         }
-        resp = self.get(self.host + "/cgi-bin/srun_portal", headers=headers, params=params).text
+        resp = self.get(
+            self.host + "/cgi-bin/srun_portal", headers=headers, params=params
+        ).text
         result: dict = loads(resp.strip(callback + "()"))
         self.logger.debug(result)
         if result.get("suc_msg"):
-            self.logger.success(f'login: {result["suc_msg"]} {self.username} {self.password} {result.get("online_ip")}')
+            self.logger.success(
+                f'login: {result["suc_msg"]} {self.username} {self.password} {result.get("online_ip")}'
+            )
         else:
             self.logger.error(f'{result.get("error")}: {result.get("error_msg")}')
             if "BAS" in result.get("error_msg") or "Nas" in result.get("error_msg"):
@@ -159,9 +173,11 @@ class Manager(Session):
             "time": t,
             "unbind": "1",
             "sign": sha1(f"{t}{username}{ip}1{t}".encode()).hexdigest(),
-            "_": round(time() * 1000)
+            "_": round(time() * 1000),
         }
-        resp = self.get(self.host + "/cgi-bin/rad_user_dm", headers=headers, params=params).text
+        resp = self.get(
+            self.host + "/cgi-bin/rad_user_dm", headers=headers, params=params
+        ).text
         result: dict = loads(resp.strip(callback + "()"))
         self.logger.debug(result)
         self.logger.info(f'logout: {result.get("error")}')
@@ -169,11 +185,10 @@ class Manager(Session):
 
     def check(self) -> dict:
         callback = f"jQuery112405185119642573086_{round(time() * 1000)}"
-        params = {
-            "callback": callback,
-            "_": round(time() * 1000)
-        }
-        resp = self.get(self.host + "/cgi-bin/rad_user_info", headers=headers, params=params).text
+        params = {"callback": callback, "_": round(time() * 1000)}
+        resp = self.get(
+            self.host + "/cgi-bin/rad_user_info", headers=headers, params=params
+        ).text
         result: dict = loads(resp.strip(callback + "()"))
         self.logger.debug(result)
         self.logger.info(f'check: {result.get("error")}')
@@ -193,7 +208,7 @@ def refresh():
         if failed:
             auth = choice(auths)
             manager.username, manager.password = auth["username"], auth["password"]
-            logger.debug(f"username or password is incorrect, retry in 2 seconds...")
+            logger.debug("username or password is incorrect, retry in 2 seconds...")
             sleep(2)
 
 
@@ -210,7 +225,7 @@ def check():
             manager.username, manager.password = auth["username"], auth["password"]
             failed = True if manager.login().get("error_msg") == "4xx" else False
             if failed:
-                logger.debug(f"username or password is incorrect, retry in 2 seconds...")
+                logger.debug("username or password is incorrect, retry in 2 seconds...")
                 sleep(2)
 
 
@@ -218,12 +233,15 @@ def main():
     global auths
     logger.remove()
     logger.add(
-        "srun_login.log", rotation="10 MB", level="DEBUG",
-        format="<g>{time:MM-DD HH:mm:ss}</g> [<lvl>{level}</lvl>] <c><u>srun_login</u></c> | {message}"
+        "srun_login.log",
+        rotation="10 MB",
+        level="DEBUG",
+        format="<g>{time:MM-DD HH:mm:ss}</g> [<lvl>{level}</lvl>] <c><u>srun_login</u></c> | {message}",
     )
     logger.add(
-        stdout, level="INFO",
-        format="<g>{time:MM-DD HH:mm:ss}</g> [<lvl>{level}</lvl>] <c><u>srun_login</u></c> | {message}"
+        stdout,
+        level="INFO",
+        format="<g>{time:MM-DD HH:mm:ss}</g> [<lvl>{level}</lvl>] <c><u>srun_login</u></c> | {message}",
     )
     try:
         auths = load(open("auth.json", "r", encoding="utf-8"))
@@ -231,8 +249,8 @@ def main():
         logger.bind(module="srun_login").error(f"{e}, please check auth.json")
         exit(-1)
     scheduler = BlockingScheduler()
-    scheduler.add_job(refresh, 'interval', hours=6)
-    scheduler.add_job(check, 'interval', minutes=2, next_run_time=datetime.now())
+    scheduler.add_job(refresh, "interval", hours=6)
+    scheduler.add_job(check, "interval", minutes=2, next_run_time=datetime.now())
     logger.info("Process started")
     scheduler.start()
 

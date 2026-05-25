@@ -19,5 +19,10 @@ def b64encode(s):
         x.append(_ALPHA[(b10 >> 18)] + _ALPHA[((b10 >> 12) & 63)] + _PADCHAR + _PADCHAR)
     elif len(s) - imax == 2:
         b10 = (ord(s[i]) << 16) | (ord(s[i + 1]) << 8)
-        x.append(_ALPHA[(b10 >> 18)] + _ALPHA[((b10 >> 12) & 63)] + _ALPHA[((b10 >> 6) & 63)] + _PADCHAR)
+        x.append(
+            _ALPHA[(b10 >> 18)]
+            + _ALPHA[((b10 >> 12) & 63)]
+            + _ALPHA[((b10 >> 6) & 63)]
+            + _PADCHAR
+        )
     return "".join(x)

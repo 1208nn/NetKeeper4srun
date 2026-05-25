@@ -10,8 +10,11 @@ def sencode(msg, key):
     pwd = []
     for i in range(0, length, 4):
         pwd.append(
-            ordat(msg, i) | ordat(msg, i + 1) << 8 | ordat(msg, i + 2) << 16
-            | ordat(msg, i + 3) << 24)
+            ordat(msg, i)
+            | ordat(msg, i + 1) << 8
+            | ordat(msg, i + 2) << 16
+            | ordat(msg, i + 3) << 24
+        )
     if key:
         pwd.append(length)
     return pwd
@@ -26,8 +29,12 @@ def lencode(msg, key):
             return
         ll = m
     for i in range(0, length):
-        msg[i] = chr(msg[i] & 0xff) + chr(msg[i] >> 8 & 0xff) + chr(
-            msg[i] >> 16 & 0xff) + chr(msg[i] >> 24 & 0xff)
+        msg[i] = (
+            chr(msg[i] & 0xFF)
+            + chr(msg[i] >> 8 & 0xFF)
+            + chr(msg[i] >> 16 & 0xFF)
+            + chr(msg[i] >> 24 & 0xFF)
+        )
     if key:
         return "".join(msg)[0:ll]
     return "".join(msg)
