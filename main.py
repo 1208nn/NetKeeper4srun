@@ -5,6 +5,7 @@ from json import loads, dumps, load
 from random import choice
 from sys import stdout
 from time import time, sleep
+import re
 
 from loguru import logger
 from requests import Session
@@ -50,7 +51,7 @@ class Manager(Session):
         resp = self.get(self.host + "/srun_portal_pc", headers=headers).text
         try:
             ip = (
-                compile(
+                re.compile(
                     r"((1\d{2}|25[0-5]|2[0-4]\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)"
                 )
                 .search(resp)
