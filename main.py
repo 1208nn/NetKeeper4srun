@@ -25,7 +25,12 @@ IP_REGEX = (
 
 class Manager(Session):
 
-    def __init__(self, username: str = "", password: str = ""):
+    def __init__(
+        self,
+        username: str = "",
+        password: str = "",
+        host: str = "http://192.168.210.175",
+    ):
         super().__init__()
         self.acid: int = 0
         self.n: str = "200"
@@ -34,7 +39,7 @@ class Manager(Session):
         self.username = username
         self.password = password
         self.logger = logger
-        self.host = self.get_host()
+        self.host = self._get_host(host)
         self.token, self.checksum, self.info = None, None, None
 
     def _jsonp(self, path: str, params: dict, prefix: str) -> dict:
@@ -47,17 +52,16 @@ class Manager(Session):
         ).text
         return loads(resp.strip(callback + "()"))
 
-    def get_host(self):
-        host = "http://192.168.210.175"
+    def _get_host(self, host):
         try:
             self.get(host)
             return host
         except Exception as e:
             self.logger.info(f"Host {host} {e}")
-        self.logger.error("Failed to get host...")
-        exit(-1)
+            self.logger.error("Failed to get host...")
+            exit(-1)
 
-    def get_ip(self) -> str:
+    def _get_ip(self) -> str:
         for _ in range(3):
             resp = self.get(self.host + "/srun_portal_pc", headers=HEADERS).text
             m = re.search(IP_REGEX, resp)
@@ -68,8 +72,8 @@ class Manager(Session):
         self.logger.error("Failed to get IP after retries")
         raise RuntimeError("Failed to obtain IP")
 
-    def login(self) -> dict:
-        ip = self.get_ip()
+    def login(self):
+        ip = self._get_ip()
         resp = self._jsonp(
             "/cgi-bin/get_challenge",
             {"username": self.username, "ip": ip},
@@ -130,21 +134,17 @@ class Manager(Session):
                 self.logger.error("ac_id error, retry in 5 seconds...")
                 self.acid += 1
                 sleep(5)
-                result = self.login()
-            elif "E2901" in msg or "E2606" in msg:
-                self.logger.error(
-                    "username or password error..."
-                    if "E2901" in msg
-                    else "user is disabled..."
-                )
-                result["error_msg"] = "4xx"
-        return result
+                self.login()
+            elif "E2901" in msg:
+                self.logger.error("username or password error...")
+            elif "E2606" in msg:
+                self.logger.error("user is disabled...")
 
-    def logout(self) -> dict:
+    def logout(self):
         t = round(time())
         status = self.check()
         username = status.get("user_name") or self.username
-        ip = status.get("online_ip") or self.get_ip()
+        ip = status.get("online_ip") or self._get_ip()
         params = {
             "username": username,
             "ip": ip,
@@ -157,7 +157,6 @@ class Manager(Session):
         )
         self.logger.debug(result)
         self.logger.info(f'logout: {result.get("error")}')
-        return result
 
     def check(self) -> dict:
         result: dict = self._jsonp(
@@ -166,18 +165,6 @@ class Manager(Session):
         self.logger.debug(result)
         self.logger.info(f'check: {result.get("error")}')
         return result
-
-    def refresh(self) -> None:
-        logger.debug("Try to refresh...")
-        self.logout()
-        self.login()
-
-    def ensure_login(self) -> None:
-        logger.debug("Check status...")
-        status = self.check()
-        if status.get("error") != "ok":
-            logger.warning(f"{status.get('error')}, try to login...")
-            self.login()
 
 
 def main():
@@ -193,16 +180,23 @@ def main():
         level="INFO",
         format="<g>{time:MM-DD HH:mm:ss}</g> [<lvl>{level}</lvl>] <c><u>srun_login</u></c> | {message}",
     )
+
     try:
         with open("srun_auth.json", "r", encoding="utf-8") as f:
             auth = load(f)
     except Exception as e:
         logger.bind(module="srun_login").error(f"{e}, please check srun_auth.json")
         exit(-1)
+
     logger.info("Process started")
+
     manager = Manager(auth["username"], auth["password"])
-    manager.refresh()
-    manager.ensure_login()
+    manager.logout()
+    manager.login()
+    status = manager.check()
+    if status.get("error") != "ok":
+        logger.warning(f"{status.get('error')}, try to login...")
+        manager.login()
 
 
 if __name__ == "__main__":
