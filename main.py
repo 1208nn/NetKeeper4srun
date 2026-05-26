@@ -15,10 +15,12 @@ from utils.device import devices
 from utils.hash import md5
 from utils.xencode import xencode
 
-headers = {
+HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
 }
-auths = []
+IP_REGEX = (
+    r"((1\d{2}|25[0-5]|2[0-4]\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)"
+)
 
 
 class Manager(Session):
@@ -35,45 +37,45 @@ class Manager(Session):
         self.host = self.get_host()
         self.token, self.checksum, self.info = None, None, None
 
+    def _jsonp(self, path: str, params: dict, prefix: str) -> dict:
+        ts = round(time() * 1000)
+        callback = f"{prefix}_{ts}"
+        resp = self.get(
+            self.host + path,
+            headers=HEADERS,
+            params={"callback": callback, "_": ts, **params},
+        ).text
+        return loads(resp.strip(callback + "()"))
+
     def get_host(self):
-        hosts = ["http://192.168.210.175"]
-        for i in hosts:
-            try:
-                self.get(i)
-                return i
-            except Exception as e:
-                self.logger.info(f"Host {i} {e}")
+        host = "http://192.168.210.175"
+        try:
+            self.get(host)
+            return host
+        except Exception as e:
+            self.logger.info(f"Host {host} {e}")
         self.logger.error("Failed to get host...")
         exit(-1)
 
     def get_ip(self) -> str:
-        resp = self.get(self.host + "/srun_portal_pc", headers=headers).text
-        try:
-            ip = (
-                re.compile(
-                    r"((1\d{2}|25[0-5]|2[0-4]\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)"
-                )
-                .search(resp)
-                .group()
-            )
-        except AttributeError:
-            self.logger.error("Failed to get IP")
-            ip = self.get_ip()
-        return ip
+        for _ in range(3):
+            resp = self.get(self.host + "/srun_portal_pc", headers=HEADERS).text
+            m = re.search(IP_REGEX, resp)
+            if m:
+                return m.group()
+            self.logger.warning("Failed to find IP in response, retrying...")
+            sleep(1)
+        self.logger.error("Failed to get IP after retries")
+        raise RuntimeError("Failed to obtain IP")
 
     def get_token(self) -> str:
-        callback = f"jQuery1124015280105355320628_{round(time() * 1000)}"
-        params = {
-            "callback": callback,
-            "username": self.username,
-            "ip": self.get_ip(),
-            "_": round(time() * 1000),
-        }
-        resp = self.get(
-            self.host + "/cgi-bin/get_challenge", headers=headers, params=params
-        ).text.strip(callback + "()")
+        resp = self._jsonp(
+            "/cgi-bin/get_challenge",
+            {"username": self.username, "ip": self.get_ip()},
+            "jQuery1124015280105355320628",
+        )
         self.logger.debug(resp)
-        token = loads(resp)["challenge"]
+        token = resp["challenge"]
         self.logger.info(f"Token: {token}")
         return token
 
@@ -107,10 +109,8 @@ class Manager(Session):
         self.token = self.get_token()
         self.info = self.get_info()
         self.checksum = self.get_checksum()
-        callback = f"jQuery1124015280105355320628_{round(time() * 1000)}"
         device = choice(devices)
         params = {
-            "callback": callback,
             "action": "login",
             "username": self.username,
             "password": "{MD5}" + md5(self.password, self.token),
@@ -123,114 +123,85 @@ class Manager(Session):
             "ip": self.get_ip(),
             "n": self.n,
             "type": self.vtype,
-            "_": round(time() * 1000),
         }
-        resp = self.get(
-            self.host + "/cgi-bin/srun_portal", headers=headers, params=params
-        ).text
-        result: dict = loads(resp.strip(callback + "()"))
+        result: dict = self._jsonp(
+            "/cgi-bin/srun_portal", params, "jQuery1124015280105355320628"
+        )
         self.logger.debug(result)
         if result.get("suc_msg"):
             self.logger.success(
                 f'login: {result["suc_msg"]} {self.username} {self.password} {result.get("online_ip")}'
             )
         else:
-            self.logger.error(f'{result.get("error")}: {result.get("error_msg")}')
-            if "BAS" in result.get("error_msg") or "Nas" in result.get("error_msg"):
-                """
-                INFO failed, BAS respond timeout.
-                Nas type not found.
-                """
+            msg = result.get("error_msg", "")
+            self.logger.error(f'{result.get("error")}: {msg}')
+            if any(k in msg for k in ("BAS", "Nas")):
                 self.logger.error("ac_id error, retry in 5 seconds...")
                 self.acid += 1
                 sleep(5)
                 result = self.login()
-            elif "E2901" in result.get("error_msg"):
-                """
-                E2901: (Third party -200)ldap_first_entry error
-                E2901: (Third party 1)bind_user2: ldap_bind error
-                """
-                self.logger.error("username or password error...")
-                result["error_msg"] = "4xx"
-            elif "E2606" in result.get("error_msg"):
-                """
-                E2606: User is disabled.
-                """
-                self.logger.error("user is disabled...")
+            elif "E2901" in msg or "E2606" in msg:
+                self.logger.error(
+                    "username or password error..."
+                    if "E2901" in msg
+                    else "user is disabled..."
+                )
                 result["error_msg"] = "4xx"
         return result
 
     def logout(self) -> dict:
-        callback = f"jQuery112405185119642573086_{round(time() * 1000)}"
         t = round(time())
         status = self.check()
-        username = status.get("user_name") if status.get("user_name") else self.username
-        ip = status.get("online_ip") if status.get("online_ip") else self.get_ip()
+        username = status.get("user_name") or self.username
+        ip = status.get("online_ip") or self.get_ip()
         params = {
-            "callback": callback,
             "username": username,
             "ip": ip,
             "time": t,
             "unbind": "1",
             "sign": sha1(f"{t}{username}{ip}1{t}".encode()).hexdigest(),
-            "_": round(time() * 1000),
         }
-        resp = self.get(
-            self.host + "/cgi-bin/rad_user_dm", headers=headers, params=params
-        ).text
-        result: dict = loads(resp.strip(callback + "()"))
+        result: dict = self._jsonp(
+            "/cgi-bin/rad_user_dm", params, "jQuery112405185119642573086"
+        )
         self.logger.debug(result)
         self.logger.info(f'logout: {result.get("error")}')
         return result
 
     def check(self) -> dict:
-        callback = f"jQuery112405185119642573086_{round(time() * 1000)}"
-        params = {"callback": callback, "_": round(time() * 1000)}
-        resp = self.get(
-            self.host + "/cgi-bin/rad_user_info", headers=headers, params=params
-        ).text
-        result: dict = loads(resp.strip(callback + "()"))
+        result: dict = self._jsonp(
+            "/cgi-bin/rad_user_info", {}, "jQuery112405185119642573086"
+        )
         self.logger.debug(result)
         self.logger.info(f'check: {result.get("error")}')
         return result
 
+    def pick_auth(self, auths) -> None:
+        auth = choice(auths)
+        self.username, self.password = auth["username"], auth["password"]
 
-def refresh():
-    global auths
-    logger.debug("Try to refresh...")
-    auth = choice(auths)
-    manager = Manager(auth["username"], auth["password"])
-    manager.logout()
-    failed = True
-    while failed:
-        result = manager.login()
-        failed = True if result.get("error_msg") == "4xx" else False
-        if failed:
-            auth = choice(auths)
-            manager.username, manager.password = auth["username"], auth["password"]
+    def login_with_retry(self, auths) -> None:
+        while self.login().get("error_msg") == "4xx":
+            self.pick_auth(auths)
             logger.debug("username or password is incorrect, retry in 2 seconds...")
             sleep(2)
 
+    def refresh(self, auths) -> None:
+        logger.debug("Try to refresh...")
+        self.pick_auth(auths)
+        self.logout()
+        self.login_with_retry(auths)
 
-def check():
-    global auths
-    logger.debug("Check status...")
-    manager = Manager()
-    status = manager.check()
-    if status.get("error") != "ok":
-        logger.warning(f"{status.get('error')}, try to login...")
-        failed = True
-        while failed:
-            auth = choice(auths)
-            manager.username, manager.password = auth["username"], auth["password"]
-            failed = True if manager.login().get("error_msg") == "4xx" else False
-            if failed:
-                logger.debug("username or password is incorrect, retry in 2 seconds...")
-                sleep(2)
+    def ensure_login(self, auths) -> None:
+        logger.debug("Check status...")
+        status = self.check()
+        if status.get("error") != "ok":
+            logger.warning(f"{status.get('error')}, try to login...")
+            self.pick_auth(auths)
+            self.login_with_retry(auths)
 
 
 def main():
-    global auths
     logger.remove()
     logger.add(
         "srun_login.log",
@@ -244,13 +215,15 @@ def main():
         format="<g>{time:MM-DD HH:mm:ss}</g> [<lvl>{level}</lvl>] <c><u>srun_login</u></c> | {message}",
     )
     try:
-        auths = load(open("srun_auth.json", "r", encoding="utf-8"))
+        with open("srun_auth.json", "r", encoding="utf-8") as f:
+            auths = load(f)
     except Exception as e:
         logger.bind(module="srun_login").error(f"{e}, please check srun_auth.json")
         exit(-1)
     logger.info("Process started")
-    refresh()
-    check()
+    manager = Manager()
+    manager.refresh(auths)
+    manager.ensure_login(auths)
 
 
 if __name__ == "__main__":
