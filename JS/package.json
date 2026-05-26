@@ -1,0 +1,13 @@
+{
+  "name": "netkeeper4srun-js",
+  "version": "1.0.0",
+  "description": "NetKeeper for srun - Campus Network Login Tool",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "build": "npx esbuild manager.js --bundle --minify --platform=node --target=node20 --external:crypto --external:https --external:http --external:url --external:fs --outfile=srun.min.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0"
+  }
+}
