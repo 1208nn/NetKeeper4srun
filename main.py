@@ -68,25 +68,23 @@ class Manager(Session):
         self.logger.error("Failed to get IP after retries")
         raise RuntimeError("Failed to obtain IP")
 
-    def get_token(self) -> str:
+    def login(self) -> dict:
+        ip = self.get_ip()
         resp = self._jsonp(
             "/cgi-bin/get_challenge",
-            {"username": self.username, "ip": self.get_ip()},
+            {"username": self.username, "ip": ip},
             "jQuery1124015280105355320628",
         )
         self.logger.debug(resp)
-        token = resp["challenge"]
-        self.logger.info(f"Token: {token}")
-        return token
-
-    def get_info(self) -> str:
-        return "{SRBX1}" + b64encode(
+        self.token = resp["challenge"]
+        self.logger.info(f"Token: {self.token}")
+        self.info = "{SRBX1}" + b64encode(
             xencode(
                 dumps(
                     {
                         "username": self.username,
                         "password": self.password,
-                        "ip": self.get_ip(),
+                        "ip": ip,
                         "acid": str(self.acid),
                         "enc_ver": self.enc_ver,
                     }
@@ -94,21 +92,14 @@ class Manager(Session):
                 self.token,
             )
         )
-
-    def get_checksum(self) -> str:
         checksum = self.token + self.username
         checksum += self.token + md5(self.password, self.token)
         checksum += self.token + str(self.acid)
-        checksum += self.token + self.get_ip()
+        checksum += self.token + ip
         checksum += self.token + self.n
         checksum += self.token + self.vtype
         checksum += self.token + self.info
-        return sha1(checksum.encode()).hexdigest()
-
-    def login(self) -> dict:
-        self.token = self.get_token()
-        self.info = self.get_info()
-        self.checksum = self.get_checksum()
+        self.checksum = sha1(checksum.encode()).hexdigest()
         device = choice(devices)
         params = {
             "action": "login",
@@ -120,7 +111,7 @@ class Manager(Session):
             "chksum": self.checksum,
             "info": self.info,
             "ac_id": str(self.acid),
-            "ip": self.get_ip(),
+            "ip": ip,
             "n": self.n,
             "type": self.vtype,
         }
@@ -176,29 +167,17 @@ class Manager(Session):
         self.logger.info(f'check: {result.get("error")}')
         return result
 
-    def pick_auth(self, auths) -> None:
-        auth = choice(auths)
-        self.username, self.password = auth["username"], auth["password"]
-
-    def login_with_retry(self, auths) -> None:
-        while self.login().get("error_msg") == "4xx":
-            self.pick_auth(auths)
-            logger.debug("username or password is incorrect, retry in 2 seconds...")
-            sleep(2)
-
-    def refresh(self, auths) -> None:
+    def refresh(self) -> None:
         logger.debug("Try to refresh...")
-        self.pick_auth(auths)
         self.logout()
-        self.login_with_retry(auths)
+        self.login()
 
-    def ensure_login(self, auths) -> None:
+    def ensure_login(self) -> None:
         logger.debug("Check status...")
         status = self.check()
         if status.get("error") != "ok":
             logger.warning(f"{status.get('error')}, try to login...")
-            self.pick_auth(auths)
-            self.login_with_retry(auths)
+            self.login()
 
 
 def main():
@@ -216,14 +195,14 @@ def main():
     )
     try:
         with open("srun_auth.json", "r", encoding="utf-8") as f:
-            auths = load(f)
+            auth = load(f)
     except Exception as e:
         logger.bind(module="srun_login").error(f"{e}, please check srun_auth.json")
         exit(-1)
     logger.info("Process started")
-    manager = Manager()
-    manager.refresh(auths)
-    manager.ensure_login(auths)
+    manager = Manager(auth["username"], auth["password"])
+    manager.refresh()
+    manager.ensure_login()
 
 
 if __name__ == "__main__":
