@@ -23,7 +23,13 @@ uv run re-login.py
 uv run check.py # Only relogin if no Internet connection
 ```
 
-## Cron Job Example
+## Cron Job
+
+```sh
+crontab -e
+```
+
+Example configuration
 
 ```text
 0 6 * * * mise x uv -- uv run /home/shy/NetKeeper4srun/re-login.py
