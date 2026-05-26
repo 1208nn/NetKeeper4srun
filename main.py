@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from hashlib import sha1
 from json import loads, dumps, load
 from random import choice
@@ -167,7 +165,7 @@ class Manager(Session):
         return result
 
 
-def main():
+def init():
     logger.remove()
     logger.add(
         "srun_login.log",
@@ -187,17 +185,4 @@ def main():
     except Exception as e:
         logger.bind(module="srun_login").error(f"{e}, please check srun_auth.json")
         exit(-1)
-
-    logger.info("Process started")
-
-    manager = Manager(auth["username"], auth["password"])
-    manager.logout()
-    manager.login()
-    status = manager.check()
-    if status.get("error") != "ok":
-        logger.warning(f"{status.get('error')}, try to login...")
-        manager.login()
-
-
-if __name__ == "__main__":
-    main()
+    return Manager(auth["username"], auth["password"])
