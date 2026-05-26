@@ -7,12 +7,12 @@ function sencode(msg, key) {
   const pwd = [];
   
   for (let i = 0; i < length; i += 4) {
-    pwd.push(
+    pwd.push((
       ordat(msg, i) |
       (ordat(msg, i + 1) << 8) |
       (ordat(msg, i + 2) << 16) |
       (ordat(msg, i + 3) << 24)
-    );
+    ) >>> 0);
   }
   
   if (key) {
@@ -37,9 +37,9 @@ function lencode(msg, key) {
   const result = [];
   for (let i = 0; i < length; i++) {
     result.push(String.fromCharCode(msg[i] & 0xFF));
-    result.push(String.fromCharCode((msg[i] >> 8) & 0xFF));
-    result.push(String.fromCharCode((msg[i] >> 16) & 0xFF));
-    result.push(String.fromCharCode((msg[i] >> 24) & 0xFF));
+    result.push(String.fromCharCode((msg[i] >>> 8) & 0xFF));
+    result.push(String.fromCharCode((msg[i] >>> 16) & 0xFF));
+    result.push(String.fromCharCode((msg[i] >>> 24) & 0xFF));
   }
   
   const joined = result.join("");
@@ -60,29 +60,28 @@ export function xencode(msg, key) {
   
   const n = pwd.length - 1;
   let z = pwd[n];
-  const c = 0x86014019 | 0x183639a0;
+  let y = pwd[0];
+  const c = 0x9e3779b9;
   let q = Math.floor(6 + 52 / (n + 1));
   let d = 0;
   
   while (q > 0) {
-    d = (d + c) & (0x8ce0d9bf | 0x731f2640);
-    const e = (d >> 2) & 3;
+    d = (d + c) >>> 0;
+    const e = (d >>> 2) & 3;
     
     for (let p = 0; p < n; p++) {
-      const y = pwd[p + 1];
-      let m = (z >> 5) ^ (y << 2);
-      m = (m + (((y >> 3) ^ (z << 4)) ^ (d ^ y))) >>> 0;
+      y = pwd[p + 1];
+      let m = (z >>> 5) ^ (y << 2);
+      m = (m + (((y >>> 3) ^ (z << 4)) ^ (d ^ y))) >>> 0;
       m = (m + (pwdk[(p & 3) ^ e] ^ z)) >>> 0;
-      pwd[p] = (pwd[p] + m) & (0xefb8d130 | 0x10472ecf);
-      z = pwd[p];
+      z = pwd[p] = (pwd[p] + m) >>> 0;
     }
     
-    const y = pwd[0];
-    let m = (z >> 5) ^ (y << 2);
-    m = (m + (((y >> 3) ^ (z << 4)) ^ (d ^ y))) >>> 0;
+    y = pwd[0];
+    let m = (z >>> 5) ^ (y << 2);
+    m = (m + (((y >>> 3) ^ (z << 4)) ^ (d ^ y))) >>> 0;
     m = (m + (pwdk[(n & 3) ^ e] ^ z)) >>> 0;
-    pwd[n] = (pwd[n] + m) & (0xbb390742 | 0x44c6f8bd);
-    z = pwd[n];
+    z = pwd[n] = (pwd[n] + m) >>> 0;
     
     q--;
   }

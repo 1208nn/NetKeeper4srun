@@ -16,6 +16,18 @@ const HEADERS = {
 const IP_REGEX =
   /((1\d{2}|25[0-5]|2[0-4]\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)/;
 
+const jsonStringifyAscii = (value) =>
+  JSON.stringify(value).replace(/[^\x00-\x7F]/g, (ch) =>
+    `\\u${ch.charCodeAt(0).toString(16).padStart(4, "0")}`
+  );
+
+const buildInfoPayload = ({ username, password, ip, acid, encVer }) =>
+  `{"username": ${jsonStringifyAscii(username)}, "password": ${jsonStringifyAscii(
+    password
+  )}, "ip": ${jsonStringifyAscii(ip)}, "acid": ${jsonStringifyAscii(
+    acid
+  )}, "enc_ver": ${jsonStringifyAscii(encVer)}}`;
+
 const httpRequest = (url, options = {}) =>
   new Promise((resolve, reject) => {
     const parsedUrl = new URL(url);
@@ -129,12 +141,12 @@ class Manager {
         "{SRBX1}" +
         b64encode(
           xencode(
-            JSON.stringify({
+            buildInfoPayload({
               username: this.username,
               password: this.password,
               ip,
               acid: String(this.acid),
-              enc_ver: this.encVer,
+              encVer: this.encVer,
             }),
             this.token
           )
