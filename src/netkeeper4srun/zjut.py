@@ -1,7 +1,7 @@
 from .manager import Manager
 
 
-def main():
+def refresh():
     manager = Manager(host="http://192.168.210.175")
     manager.logout()
     manager.login()
@@ -20,8 +20,4 @@ def check():
             return False
 
     if not check_http():
-        main()
-
-
-if __name__ == "__main__":
-    main()
+        refresh()
