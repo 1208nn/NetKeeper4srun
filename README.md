@@ -2,8 +2,8 @@
 
 ## Setup
 
-- Python runtime `mise i`
-- Python packages `uv sync`
+- Python runtime `mise use -g uv@latest python@latest`
+- Python packages `uv tool install git+https://github.com/1208nn/NetKeeper4srun.git`
 
 ## Configure Sensitive Credentials
 
@@ -11,15 +11,14 @@
 > The following steps involve handling sensitive credentials. Ensure that you follow best practices for security and do not share your credentials with others.
 
 ```sh
-cp srun_auth.json.template srun_auth.json
+touch srun_auth.json
 edit srun_auth.json
-ln srun_auth.json ~/.srun_auth.json
 ```
 
 ## Usage
 
 ```sh
-uv run ./src/netkeeper4srun/zjut.py
+zjut-refresh
 ```
 
 ## Cron Job
@@ -31,7 +30,7 @@ crontab -e
 Example configuration
 
 ```text
-40 6 * * * mise x uv -- uv run /home/shy/NetKeeper4srun/src/netkeeper4srun/zjut.py
+35 6 * * * mise x -- uv tool run --from netkeeper4srun zjut-refresh
 ```
 
 ## Javascript Version
