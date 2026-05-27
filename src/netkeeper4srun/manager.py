@@ -8,10 +8,10 @@ import re
 from loguru import logger
 from requests import Session
 
-from utils.base import b64encode
-from utils.device import devices
-from utils.hash import md5
-from utils.xencode import xencode
+from .utils.base import b64encode
+from .utils.device import devices
+from .utils.hash import md5
+from .utils.xencode import xencode
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
