@@ -1,8 +1,8 @@
-from main import init
+from main import Manager
 
 
 def main():
-    manager = init()
+    manager = Manager(host="http://192.168.210.175")
     manager.logout()
     manager.login()
     if manager.check().get("error") != "ok":

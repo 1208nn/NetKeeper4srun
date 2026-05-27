@@ -19,26 +19,58 @@ HEADERS = {
 IP_REGEX = (
     r"((1\d{2}|25[0-5]|2[0-4]\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)"
 )
+LOG_FORMAT = (
+    "<g>{time:MM/DD HH:mm:ss}</g> "
+    "<c><u>NetKeeper4srun</u></c> "
+    "[<lvl>{level}</lvl>] "
+    "{message}"
+)
 
 
 class Manager(Session):
+
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
     def __init__(
         self,
         username: str = "",
         password: str = "",
-        host: str = "http://192.168.210.175",
+        host: str = "",
+        config_path: str = "srun_auth.json",
+        log_path: str = "srun_login.log",
+        logger_instance=logger,
     ):
         super().__init__()
+
         self.acid: int = 0
         self.n: str = "200"
         self.vtype: str = "1"
         self.enc_ver: str = "srun_bx1"
-        self.username = username
-        self.password = password
-        self.logger = logger
-        self.host = self._get_host(host)
         self.token, self.checksum, self.info = None, None, None
+
+        self.logger = logger_instance
+        self.logger.remove()
+        self.logger.add(log_path, rotation="1 MB", level="DEBUG", format=LOG_FORMAT)
+        self.logger.add(stdout, level="INFO", format=LOG_FORMAT)
+
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                vars(self).update(load(f))
+        except FileNotFoundError:
+            pass
+        if username:
+            self.username = username
+        if password:
+            self.password = password
+        if host:
+            self.host = host
+        if [i for i in ["username", "password", "host"] if not hasattr(self, i)]:
+            raise Exception
 
     def _jsonp(self, path: str, params: dict, prefix: str) -> dict:
         ts = round(time() * 1000)
@@ -49,15 +81,6 @@ class Manager(Session):
             params={"callback": callback, "_": ts, **params},
         ).text
         return loads(resp.strip(callback + "()"))
-
-    def _get_host(self, host):
-        try:
-            self.get(host)
-            return host
-        except Exception as e:
-            self.logger.info(f"Host {host} {e}")
-            self.logger.error("Failed to get host...")
-            exit(-1)
 
     def _get_ip(self) -> str:
         for _ in range(3):
@@ -163,26 +186,3 @@ class Manager(Session):
         self.logger.debug(result)
         self.logger.info(f'check: {result.get("error")}')
         return result
-
-
-def init():
-    logger.remove()
-    logger.add(
-        "srun_login.log",
-        rotation="1 MB",
-        level="DEBUG",
-        format="<g>{time:MM-DD HH:mm:ss}</g> [<lvl>{level}</lvl>] <c><u>srun_login</u></c> | {message}",
-    )
-    logger.add(
-        stdout,
-        level="INFO",
-        format="<g>{time:MM-DD HH:mm:ss}</g> [<lvl>{level}</lvl>] <c><u>srun_login</u></c> | {message}",
-    )
-
-    try:
-        with open("srun_auth.json", "r", encoding="utf-8") as f:
-            auth = load(f)
-    except Exception as e:
-        logger.bind(module="srun_login").error(f"{e}, please check srun_auth.json")
-        exit(-1)
-    return Manager(auth["username"], auth["password"])
