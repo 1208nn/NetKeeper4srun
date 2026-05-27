@@ -1,9 +1,11 @@
+from time import sleep
 from .manager import Manager
 
 
 def refresh():
     manager = Manager(host="http://192.168.210.175")
     manager.logout()
+    sleep(1)
     manager.login()
     if manager.check().get("error") != "ok":
         manager.login()

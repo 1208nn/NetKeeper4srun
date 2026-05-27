@@ -2,8 +2,8 @@
 
 ## Setup
 
-- Python runtime `mise use -g uv@latest python@latest`
-- Python packages `uv tool install git+https://github.com/1208nn/NetKeeper4srun.git`
+- Python runtime `mise use -g uv python`
+- Python package `mise use -g pipx:git+https://github.com/1208nn/NetKeeper4srun.git`
 
 ## Configure Sensitive Credentials
 
@@ -30,9 +30,16 @@ crontab -e
 Example configuration
 
 ```text
-35 6 * * * mise x -- uv tool run --from netkeeper4srun zjut-refresh
+35 6 * * * mise x -- zjut-refresh
 ```
 
 ## Javascript Version
 
 The JavaScript version of this project is already available now.
+
+## Development
+
+```sh
+mise i
+uv sync
+```
