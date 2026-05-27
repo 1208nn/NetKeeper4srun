@@ -19,8 +19,7 @@ ln srun_auth.json ~/.srun_auth.json
 ## Usage
 
 ```sh
-uv run re-login.py
-uv run check.py # Only relogin if no Internet connection
+uv run ./src/netkeeper4srun/zjut.py
 ```
 
 ## Cron Job
@@ -32,7 +31,7 @@ crontab -e
 Example configuration
 
 ```text
-0 6 * * * mise x uv -- uv run /home/shy/NetKeeper4srun/re-login.py
+40 6 * * * mise x uv -- uv run /home/shy/NetKeeper4srun/src/netkeeper4srun/zjut.py
 ```
 
 ## Javascript Version
