@@ -17,15 +17,16 @@ const IP_REGEX =
   /((1\d{2}|25[0-5]|2[0-4]\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)/;
 
 const jsonStringifyAscii = (value) =>
-  JSON.stringify(value).replace(/[^\x00-\x7F]/g, (ch) =>
-    `\\u${ch.charCodeAt(0).toString(16).padStart(4, "0")}`
+  JSON.stringify(value).replace(
+    /[^\x00-\x7F]/g,
+    (ch) => `\\u${ch.charCodeAt(0).toString(16).padStart(4, "0")}`,
   );
 
 const buildInfoPayload = ({ username, password, ip, acid, encVer }) =>
   `{"username": ${jsonStringifyAscii(username)}, "password": ${jsonStringifyAscii(
-    password
+    password,
   )}, "ip": ${jsonStringifyAscii(ip)}, "acid": ${jsonStringifyAscii(
-    acid
+    acid,
   )}, "enc_ver": ${jsonStringifyAscii(encVer)}}`;
 
 const httpRequest = (url, options = {}) =>
@@ -48,7 +49,7 @@ const httpRequest = (url, options = {}) =>
         let data = "";
         res.on("data", (chunk) => (data += chunk));
         res.on("end", () => resolve(data));
-      }
+      },
     );
 
     req.on("error", reject);
@@ -131,7 +132,7 @@ class Manager {
       const challengeResp = await this._jsonp(
         "/cgi-bin/get_challenge",
         { username: this.username, ip },
-        "jQuery1124015280105355320628"
+        "jQuery1124015280105355320628",
       );
       logger.debug(challengeResp);
       this.token = challengeResp.challenge;
@@ -148,8 +149,8 @@ class Manager {
               acid: String(this.acid),
               encVer: this.encVer,
             }),
-            this.token
-          )
+            this.token,
+          ),
         );
 
       let checksum = this.token + this.username;
@@ -180,13 +181,13 @@ class Manager {
       const result = await this._jsonp(
         "/cgi-bin/srun_portal",
         params,
-        "jQuery1124015280105355320628"
+        "jQuery1124015280105355320628",
       );
       logger.debug(result);
 
       if (result.suc_msg) {
         logger.info(
-          `login: ${result.suc_msg} ${this.username} ${this.password} ${result.online_ip || ""}`
+          `login: ${result.suc_msg} ${this.username} ${this.password} ${result.online_ip || ""}`,
         );
       } else {
         const msg = result.error_msg || "";
@@ -231,7 +232,7 @@ class Manager {
       const result = await this._jsonp(
         "/cgi-bin/rad_user_dm",
         params,
-        "jQuery112405185119642573086"
+        "jQuery112405185119642573086",
       );
       logger.debug(result);
       logger.info(`logout: ${result.error}`);
@@ -246,7 +247,7 @@ class Manager {
       const result = await this._jsonp(
         "/cgi-bin/rad_user_info",
         {},
-        "jQuery112405185119642573086"
+        "jQuery112405185119642573086",
       );
       logger.debug(result);
       logger.info(`check: ${result.error}`);
