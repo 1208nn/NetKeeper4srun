@@ -15,6 +15,16 @@ touch srun_auth.json
 edit srun_auth.json
 ```
 
+`srun_auth.json` Example
+
+```json
+{
+  "username": "your_username",
+  "password": "your_password",
+  "host": "http://server_ip"
+}
+```
+
 ## Usage
 
 ```sh

@@ -2,7 +2,7 @@ import crypto from "crypto";
 import https from "https";
 import http from "http";
 import { URL } from "url";
-import { logger } from "./utils/logger.js";
+import fs from "fs";
 import { b64encode } from "./utils/base.js";
 import { md5 } from "./utils/hash.js";
 import { xencode } from "./utils/xencode.js";
@@ -15,6 +15,26 @@ const HEADERS = {
 
 const IP_REGEX =
   /((1\d{2}|25[0-5]|2[0-4]\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)/;
+
+const LOG_FORMAT = (level, msg) => {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  const seconds = String(now.getSeconds()).padStart(2, "0");
+  const timestamp = `${month}/${day} ${hours}:${minutes}:${seconds}`;
+  const levelColors = {
+    INFO: "\x1b[36m",
+    WARN: "\x1b[33m",
+    ERROR: "\x1b[31m",
+    DEBUG: "\x1b[35m",
+    SUCCESS: "\x1b[32m",
+  };
+  const color = levelColors[level] || "\x1b[0m";
+  const reset = "\x1b[0m";
+  return `${color}${timestamp}${reset} \x1b[36m\x1b[4mNetKeeper4srun\x1b[0m [${color}${level}${reset}] ${msg}`;
+};
 
 const jsonStringifyAscii = (value) =>
   JSON.stringify(value).replace(
@@ -63,29 +83,97 @@ const httpRequest = (url, options = {}) =>
   });
 
 class Manager {
-  constructor(username = "", password = "") {
+  static _instance = null;
+
+  constructor(
+    username = "",
+    password = "",
+    host = "",
+    configPath = "srun_auth.json",
+    logPath = "srun_login.log",
+  ) {
+    // Support both positional and named parameters
+    if (
+      typeof username === "object" &&
+      username !== null &&
+      !Array.isArray(username)
+    ) {
+      const {
+        username: u = "",
+        password: p = "",
+        host: h = "",
+        configPath: cp = "srun_auth.json",
+        logPath: lp = "srun_login.log",
+      } = username;
+      username = u;
+      password = p;
+      host = h;
+      configPath = cp;
+      logPath = lp;
+    }
+
+    if (Manager._instance !== null) {
+      return Manager._instance;
+    }
+
     this.acid = 0;
     this.n = "200";
     this.vtype = "1";
     this.encVer = "srun_bx1";
     this.username = username;
     this.password = password;
-    this.host = null;
+    this.host = host;
     this.token = null;
     this.checksum = null;
     this.info = null;
+    this.logPath = logPath;
+
+    this._initLogger();
+
+    try {
+      if (fs.existsSync(configPath)) {
+        const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+        Object.assign(this, config);
+      }
+    } catch (e) {
+      this.logger(
+        "WARN",
+        `Failed to load config from ${configPath}: ${e.message}`,
+      );
+    }
+
+    if (username) this.username = username;
+    if (password) this.password = password;
+    if (host) this.host = host;
+
+    if (!this.username || !this.password || !this.host) {
+      throw new Error(
+        "Missing required credentials: username, password, or host",
+      );
+    }
+
+    Manager._instance = this;
   }
 
-  async _getHost(host) {
-    try {
-      await httpRequest(host);
-      this.host = host;
-      return host;
-    } catch (e) {
-      logger.info(`Host ${host} ${e.message}`);
-      logger.error("Failed to get host...");
-      process.exit(-1);
-    }
+  _initLogger() {
+    this.logger = (level, msg) => {
+      const formatted = LOG_FORMAT(level, msg);
+
+      if (level === "ERROR") console.error(formatted);
+      else if (level === "WARN") console.warn(formatted);
+      else console.log(formatted);
+
+      if (["DEBUG", "INFO", "WARN", "ERROR", "SUCCESS"].includes(level)) {
+        try {
+          fs.appendFileSync(
+            this.logPath,
+            `${formatted.replace(/\x1b\[[0-9;]*m/g, "")}\n`,
+          );
+        } catch (e) {
+          // Silently fail if unable to write to log file
+        }
+      }
+    };
   }
 
   async _jsonp(path, params, prefix) {
@@ -103,7 +191,7 @@ class Manager {
       const json = text.substring(callback.length + 1, text.length - 1);
       return JSON.parse(json);
     } catch (e) {
-      logger.error(`JSONP request failed: ${e.message}`);
+      this.logger("ERROR", `JSONP request failed: ${e.message}`);
       throw e;
     }
   }
@@ -116,13 +204,13 @@ class Manager {
         if (m) {
           return m[0];
         }
-        logger.warn("Failed to find IP in response, retrying...");
+        this.logger("WARN", "Failed to find IP in response, retrying...");
         await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (e) {
-        logger.warn(`Attempt ${attempt + 1} failed: ${e.message}`);
+        this.logger("WARN", `Attempt ${attempt + 1} failed: ${e.message}`);
       }
     }
-    logger.error("Failed to get IP after retries");
+    this.logger("ERROR", "Failed to get IP after retries");
     throw new Error("Failed to obtain IP");
   }
 
@@ -134,9 +222,9 @@ class Manager {
         { username: this.username, ip },
         "jQuery1124015280105355320628",
       );
-      logger.debug(challengeResp);
+      this.logger("DEBUG", JSON.stringify(challengeResp));
       this.token = challengeResp.challenge;
-      logger.info(`Token: ${this.token}`);
+      this.logger("INFO", `Token: ${this.token}`);
 
       this.info =
         "{SRBX1}" +
@@ -183,28 +271,29 @@ class Manager {
         params,
         "jQuery1124015280105355320628",
       );
-      logger.debug(result);
+      this.logger("DEBUG", JSON.stringify(result));
 
       if (result.suc_msg) {
-        logger.info(
+        this.logger(
+          "SUCCESS",
           `login: ${result.suc_msg} ${this.username} ${this.password} ${result.online_ip || ""}`,
         );
       } else {
         const msg = result.error_msg || "";
-        logger.error(`${result.error}: ${msg}`);
+        this.logger("ERROR", `${result.error}: ${msg}`);
         if (msg.includes("BAS") || msg.includes("Nas")) {
-          logger.error("ac_id error, retry in 5 seconds...");
+          this.logger("ERROR", "ac_id error, retry in 5 seconds...");
           this.acid += 1;
           await new Promise((resolve) => setTimeout(resolve, 5000));
           await this.login();
         } else if (msg.includes("E2901")) {
-          logger.error("username or password error...");
+          this.logger("ERROR", "username or password error...");
         } else if (msg.includes("E2606")) {
-          logger.error("user is disabled...");
+          this.logger("ERROR", "user is disabled...");
         }
       }
     } catch (e) {
-      logger.error(`Login failed: ${e.message}`);
+      this.logger("ERROR", `Login failed: ${e.message}`);
       throw e;
     }
   }
@@ -234,10 +323,10 @@ class Manager {
         params,
         "jQuery112405185119642573086",
       );
-      logger.debug(result);
-      logger.info(`logout: ${result.error}`);
+      this.logger("DEBUG", JSON.stringify(result));
+      this.logger("INFO", `logout: ${result.error}`);
     } catch (e) {
-      logger.error(`Logout failed: ${e.message}`);
+      this.logger("ERROR", `Logout failed: ${e.message}`);
       throw e;
     }
   }
@@ -249,11 +338,11 @@ class Manager {
         {},
         "jQuery112405185119642573086",
       );
-      logger.debug(result);
-      logger.info(`check: ${result.error}`);
+      this.logger("DEBUG", JSON.stringify(result));
+      this.logger("INFO", `check: ${result.error}`);
       return result;
     } catch (e) {
-      logger.error(`Check failed: ${e.message}`);
+      this.logger("ERROR", `Check failed: ${e.message}`);
       throw e;
     }
   }
