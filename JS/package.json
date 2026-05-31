@@ -1,21 +1,20 @@
 {
   "name": "netkeeper4srun-js",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "NetKeeper for srun - Campus Network Login Tool",
-  "main": "manager.js",
   "type": "module",
-  "exports": {
-    ".": {
-      "import": "./manager.js"
-    }
-  },
+  "files": [
+    "index.js",
+    "zjut-refresh.js",
+    "utils"
+  ],
   "scripts": {
-    "build": "esbuild main.js --bundle --minify --platform=node --target=node20 --format=esm --external:crypto --external:https --external:http --external:url --external:fs --outfile=srun.min.js"
+    "build": "esbuild zjut-refresh.js --bundle --minify --platform=node --target=node20 --format=esm --external:crypto --external:https --external:http --external:url --external:fs --outfile=zjut-refresh.min.js"
   },
   "devDependencies": {
     "esbuild": "^0.28.0"
   },
   "bin": {
-    "srun": "./srun.min.js"
+    "zjut-refresh-js": "./zjut-refresh.js"
   }
 }

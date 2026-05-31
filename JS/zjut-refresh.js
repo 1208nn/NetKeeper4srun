@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import Manager from "./manager.js";
+import Manager from "./index.js";
 
 async function main() {
   try {
