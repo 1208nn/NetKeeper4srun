@@ -165,3 +165,12 @@ Common errors and their causes:
 - **"username or password error"**: Invalid credentials
 - **"user is disabled"**: Account is disabled or 不在可用时段
 - **"Missing required credentials"**: username, password, or host not provided or found in config
+
+## Dev Notes
+
+On update:
+
+```sh
+git subtree split --prefix JS -b JS
+git push origin JS:JS
+```
