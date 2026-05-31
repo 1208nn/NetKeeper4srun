@@ -7,13 +7,13 @@ JavaScript implementation of NetKeeper for srun Campus Network Login.
 ### As a Command-Line Tool
 
 ```sh
-npm install -g github:1208nn/NetKeeper4srun/JS
+npm install -g github:1208nn/NetKeeper4srun#JS
 ```
 
 ### As a Module
 
 ```sh
-npm install github:1208nn/NetKeeper4srun/JS
+npm install github:1208nn/NetKeeper4srun#JS
 ```
 
 ## Configuration
