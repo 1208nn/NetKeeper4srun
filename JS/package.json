@@ -3,6 +3,7 @@
   "version": "1.0.3",
   "description": "NetKeeper for srun - Campus Network Login Tool",
   "type": "module",
+  "main": "index.js",
   "files": [
     "index.js",
     "zjut-refresh.js",
