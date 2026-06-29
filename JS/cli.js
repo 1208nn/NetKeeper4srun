@@ -8,7 +8,7 @@ const host = {
 
 async function main() {
   try {
-    const manager = new Manager({ host: host[process.argv[2]] });
+    const manager = new Manager({ host: "http://" + host[process.argv[2]] });
     await manager.logout();
     await new Promise((resolve) => setTimeout(resolve, 1000));
     await manager.login();
