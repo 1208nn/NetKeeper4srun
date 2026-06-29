@@ -33,7 +33,7 @@ Create a `srun_auth.json` file in your project directory:
 ### Command Line
 
 ```sh
-srun
+srun-refresh your_school_name
 ```
 
 This will automatically:
@@ -154,7 +154,7 @@ MM/DD HH:mm:ss NetKeeper4srun [LEVEL] message
 npm run build
 ```
 
-This creates `srun.min.js` - a minified, bundled version suitable for deployment.
+This creates `srun-refresh.min.js` - a minified, bundled version suitable for deployment.
 
 ## Error Handling
 
