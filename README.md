@@ -3,7 +3,7 @@
 ## Setup
 
 - Python runtime `mise use -g uv python`
-- Python package `mise use -g pipx:git+https://github.com/1208nn/NetKeeper4srun.git`
+- Python cli `mise use -g pipx:git+https://github.com/1208nn/NetKeeper4srun.git`
 
 ## Configure Sensitive Credentials
 
