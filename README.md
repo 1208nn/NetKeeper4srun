@@ -33,7 +33,7 @@ Create a `srun_auth.json` file in your project directory:
 ### Command Line
 
 ```sh
-srun-refresh your_school_name
+srun-refresh-js your_school_name
 ```
 
 This will automatically:
