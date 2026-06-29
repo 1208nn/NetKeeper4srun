@@ -1,9 +1,14 @@
+from sys import argv
 from time import sleep
 from .manager import Manager
 
+host = {
+    "zjut": "192.168.210.175",
+}
+
 
 def refresh():
-    manager = Manager(host="http://192.168.210.175")
+    manager = Manager(host="http://" + host[argv[1]])
     manager.logout()
     sleep(1)
     manager.login()

@@ -28,7 +28,7 @@ edit srun_auth.json
 ## Usage
 
 ```sh
-zjut-refresh
+srun-refresh your_school_name
 ```
 
 ## Cron Job
@@ -40,7 +40,7 @@ crontab -e
 Example configuration
 
 ```text
-35 6 * * * mise x -- zjut-refresh
+35 6 * * * mise x -- srun-refresh zjut
 ```
 
 ## Javascript Version
