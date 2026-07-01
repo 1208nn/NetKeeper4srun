@@ -5,7 +5,7 @@ import Manager from "./index.js";
 
 async function main() {
     try {
-        const manager = new Manager({ host: "http://192.168.210.171" });
+        const manager = new Manager({ host: "http://192.168.210.175" });
         await manager.logout();
         await new Promise((resolve) => setTimeout(resolve, 1000));
         await manager.login();

@@ -1,9 +1,11 @@
 from sys import argv
 from time import sleep
+import requests
 from .manager import Manager
 
 host = {
     "zjut": "192.168.210.175",
+    "zjutpf": "192.168.210.171",
 }
 
 
@@ -17,7 +19,6 @@ def refresh():
 
 
 def check():
-    import requests
 
     def check_http(url="https://www.microsoft.com"):
         try:

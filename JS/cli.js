@@ -4,6 +4,7 @@ import Manager from "./index.js";
 
 const host = {
   zjut: "192.168.210.175",
+  zjutpf: "192.168.210.171",
 };
 
 async function main() {
