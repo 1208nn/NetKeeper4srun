@@ -9,7 +9,9 @@ const host = {
 
 async function main() {
   try {
-    const manager = new Manager({ host: "http://" + host[process.argv[2]] });
+    const manager = process.argv[2] && host[process.argv[2]]
+      ? new Manager({ host: "http://" + host[process.argv[2]] })
+      : new Manager();
     await manager.logout();
     await new Promise((resolve) => setTimeout(resolve, 1000));
     await manager.login();
