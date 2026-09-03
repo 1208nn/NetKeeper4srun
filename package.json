@@ -1,6 +1,6 @@
 {
   "name": "netkeeper4srun-js",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "NetKeeper for srun - Campus Network Login Tool",
   "type": "module",
   "main": "index.js",
