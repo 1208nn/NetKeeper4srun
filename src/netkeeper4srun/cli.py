@@ -1,4 +1,4 @@
-from sys import argv
+import sys
 from time import sleep
 import requests
 from .manager import Manager
@@ -11,8 +11,8 @@ host = {
 
 def refresh():
     manager = (
-        Manager(host="http://" + host[argv[1]])
-        if len(argv) > 1 and argv[1] in host
+        Manager(host="http://" + host[sys.argv[1]])
+        if len(sys.argv) > 1 and sys.argv[1] in host
         else Manager()
     )
     manager.logout()
@@ -33,3 +33,7 @@ def check():
 
     if not check_http():
         refresh()
+
+
+if __name__ == "__main__":
+    refresh()
