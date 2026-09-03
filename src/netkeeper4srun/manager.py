@@ -63,6 +63,10 @@ class Manager(Session):
                 vars(self).update(load(f))
         except FileNotFoundError:
             pass
+
+        if hasattr(self, "ac_id"):
+            self.acid = int(self.ac_id)
+
         if username:
             self.username = username
         if password:

@@ -18,6 +18,7 @@ def refresh():
     manager.logout()
     sleep(1)
     manager.login()
+    sleep(1)
     if manager.check().get("error") != "ok":
         manager.login()
 

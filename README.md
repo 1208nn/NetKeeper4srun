@@ -21,6 +21,7 @@ edit srun_auth.json
 {
   "username": "your_username",
   "password": "your_password",
+  "ac_id": 3,
   "host": "http://server_ip"
 }
 ```
