@@ -146,6 +146,10 @@ class Manager {
     if (password) this.password = password;
     if (host) this.host = host;
 
+    if (typeof this.ac_id === "number" || typeof this.ac_id === "string") {
+      this.acid = Number(this.ac_id);
+    }
+
     if (!this.username || !this.password || !this.host) {
       throw new Error(
         "Missing required credentials: username, password, or host",

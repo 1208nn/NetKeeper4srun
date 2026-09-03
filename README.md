@@ -24,6 +24,7 @@ Create a `srun_auth.json` file in your project directory:
 {
   "username": "your_username",
   "password": "your_password",
+  "ac_id": 3,
   "host": "http://192.168.210.175"
 }
 ```
@@ -74,6 +75,7 @@ main().catch(console.error);
 ## Features
 
 - **Automatic Configuration Loading**: Manager loads `srun_auth.json` automatically on initialization
+- **Configurable AC ID**: `ac_id` can be set in `srun_auth.json`
 - **Integrated Logging**: All logs are written to both console (with colors) and log file
 - **Singleton Pattern**: Only one Manager instance can exist at a time
 - **Error Handling**: Comprehensive error handling with detailed error messages
